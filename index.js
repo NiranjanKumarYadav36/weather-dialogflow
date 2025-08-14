@@ -1,51 +1,59 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const fetch = require('node-fetch');
+const axios = require('axios');
 
 const app = express();
 app.use(bodyParser.json());
 
-const API_KEY = 'f89c5e285d63eff12caeb403f0946c91'; // Replace with your key
-
-app.get('/', (req, res) => {
-  res.send('Weather webhook is running!');
-});
+// Replace with a real weather API key (e.g., OpenWeatherMap)
+const WEATHER_API_KEY = 'f89c5e285d63eff12caeb403f0946c91';
 
 app.post('/webhook', async (req, res) => {
-  const city = req.body.queryResult.parameters['geo-city'];
+  const intentName = req.body.queryResult.intent.displayName;
+  const parameters = req.body.queryResult.parameters;
 
-  if (!city) {
-    return res.json({
-      fulfillmentText: "Please tell me which city you want the weather for."
-    });
-  }
+  if (intentName === 'Get Weather') {
+    const city = parameters['geo-city']; // Changed from parameters.city
 
-  const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric`;
-
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (data.cod !== 200) {
+    if (!city) {
       return res.json({
-        fulfillmentText: `I couldn't find the weather for ${city}.`
+        fulfillmentText: "Please tell me which city you want the weather for.",
+        source: 'weather-webhook'
       });
     }
 
-    const temp = data.main.temp;
-    const weather = data.weather[0].description;
+    try {
+      const response = await axios.get(
+        `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${WEATHER_API_KEY}&units=metric`
+      );
 
-    return res.json({
-      fulfillmentText: `The current temperature in ${city} is ${temp}°C with ${weather}.`
-    });
+      const weatherData = response.data;
+      const weatherDesc = weatherData.weather[0].description;
+      const temp = weatherData.main.temp;
+      const humidity = weatherData.main.humidity;
 
-  } catch (error) {
-    console.error(error);
-    return res.json({
-      fulfillmentText: `Sorry, I couldn't fetch the weather for ${city}.`
+      const fulfillmentText = `In ${city}, it's ${weatherDesc} with a temperature of ${temp}°C and humidity at ${humidity}%.`;
+
+      res.json({
+        fulfillmentText: fulfillmentText,
+        source: 'weather-webhook'
+      });
+    } catch (error) {
+      console.error('Error fetching weather:', error);
+      res.json({
+        fulfillmentText: `Sorry, I couldn't get the weather for ${city}. Please try another city.`,
+        source: 'weather-webhook'
+      });
+    }
+  } else {
+    res.json({
+      fulfillmentText: "I'm not sure how to handle that request.",
+      source: 'weather-webhook'
     });
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Webhook server running on port ${PORT}`);
+});
