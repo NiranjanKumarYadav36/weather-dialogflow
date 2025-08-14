@@ -16,10 +16,16 @@ app.post('/webhook', async (req, res) => {
     const parameters = req.body.queryResult.parameters;
     
     if (intentName === 'Get Weather') {
-        const city = parameters.city;
+        const city = parameters['geo-city']; // Changed from parameters.city
+        
+        if (!city) {
+            return res.json({
+                fulfillmentText: "Please tell me which city you want the weather for.",
+                source: 'weather-webhook'
+            });
+        }
         
         try {
-            // Call weather API (example using OpenWeatherMap)
             const response = await axios.get(
                 `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${WEATHER_API_KEY}&units=metric`
             );
