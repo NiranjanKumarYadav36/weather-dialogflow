@@ -5,7 +5,7 @@ const axios = require('axios');
 const app = express();
 app.use(bodyParser.json());
 
-const API_KEY = 'f89c5e285d63eff12caeb403f0946c91'; // Replace with your key
+const WEATHER_API_KEY = 'f89c5e285d63eff12caeb403f0946c91'; // Replace with your key
 
 app.get('/', (req, res) => {
   res.send('Weather webhook is running!');
